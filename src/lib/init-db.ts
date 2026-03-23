@@ -26,6 +26,7 @@ async function init() {
       user: process.env.MYSQL_USER || process.env.DB_USER || 'root',
       password: process.env.MYSQL_PASSWORD || process.env.DB_PASSWORD || '',
       port: parseInt(process.env.MYSQL_PORT || process.env.DB_PORT || '3306'),
+      connectTimeout: 10000,
     });
     const dbName = process.env.MYSQL_DATABASE || process.env.DB_DATABASE || 'cineelite1';
     await connectionWithoutDb.query(`CREATE DATABASE IF NOT EXISTS \`${dbName}\``);
