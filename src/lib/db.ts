@@ -7,8 +7,11 @@ const pool = mysql.createPool({
   database: process.env.MYSQL_DATABASE || process.env.DB_DATABASE || 'cineelite1',
   port: parseInt(process.env.MYSQL_PORT || process.env.DB_PORT || '3306'),
   waitForConnections: true,
-  connectionLimit: 10,
+  connectionLimit: 5,
   queueLimit: 0,
+  connectTimeout: 10000, // 10 seconds
+  enableKeepAlive: true,
+  keepAliveInitialDelay: 0,
 });
 
 export async function query<T = any>(sql: string, values?: any[]): Promise<T> {

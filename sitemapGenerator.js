@@ -1,6 +1,6 @@
 
 require('dotenv').config();
-const { initializeApp, cert } = require('firebase-admin/app');
+const { initializeApp, cert, getApps } = require('firebase-admin/app');
 const { getFirestore } = require('firebase-admin/firestore');
 const { Cursors } = require('google-gax');
 const fs = require('fs');
@@ -14,22 +14,21 @@ const SITEMAP_PATH = path.join(__dirname, 'public', 'sitemap.xml');
 // Initialize Firebase Admin SDK
 try {
     const serviceAccountKey = process.env.FIREBASE_SERVICE_ACCOUNT_KEY;
-    if (!serviceAccountKey) {
-        throw new Error('FIREBASE_SERVICE_ACCOUNT_KEY is not set in the environment variables.');
+    if (serviceAccountKey) {
+        const serviceAccount = JSON.parse(serviceAccountKey);
+        initializeApp({
+            credential: cert(serviceAccount)
+        });
+        console.log('Firebase Admin SDK initialized successfully.');
+    } else {
+        console.warn('FIREBASE_SERVICE_ACCOUNT_KEY is not set. Sitemap might be incomplete.');
     }
-    const serviceAccount = JSON.parse(serviceAccountKey);
-
-    initializeApp({
-        credential: cert(serviceAccount)
-    });
-
-    console.log('Firebase Admin SDK initialized successfully.');
 } catch (error) {
     console.error('Error initializing Firebase Admin SDK:', error.message);
-    process.exit(1);
+    // Don't exit process, just log it. A broken sitemap shouldn't stop the whole build.
 }
 
-const db = getFirestore();
+const db = getApps().length > 0 ? getFirestore() : null;
 
 // Function to generate the sitemap
 async function generateSitemap() {
@@ -44,11 +43,22 @@ async function generateSitemap() {
             '/portfolio',
             '/pricing',
             '/contact',
+            '/privacy-policy',
+            '/terms',
+            '/refund-policy',
+            '/cancellation-policy'
         ];
 
-        // 2. Fetch dynamic pages from Firestore
-        const legalPagesSnapshot = await db.collection('legal_pages').get();
-        const dynamicPages = legalPagesSnapshot.docs.map(doc => `/${doc.id}`);
+        let dynamicPages = [];
+        // 2. Fetch dynamic pages from Firestore (only if db is available)
+        if (db) {
+            try {
+                const legalPagesSnapshot = await db.collection('legal_pages').get();
+                dynamicPages = legalPagesSnapshot.docs.map(doc => `/${doc.id}`);
+            } catch (e) {
+                console.error("Failed to fetch dynamic pages for sitemap:", e.message);
+            }
+        }
         
         console.log(`Found ${staticPages.length} static pages and ${dynamicPages.length} dynamic pages.`);
 
